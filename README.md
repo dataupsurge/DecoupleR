@@ -1,101 +1,173 @@
 <!-- badges: start -->
 [![codecov](https://codecov.io/gh/dataupsurge/DecoupleR/graph/badge.svg?token=jCVVBVqP6a)](https://codecov.io/gh/dataupsurge/DecoupleR)
-[![R-CMD-check](https://github.com/dataupsurge/SQLFormatteR/actions/workflows/R-CMD-check/badge.svg)](https://github.com/dataupsurge/SQLFormatteR/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/dataupsurge/DecoupleR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/dataupsurge/DecoupleR/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 # DecoupleR
 
-Strict separation of settings from code.
+> Strict separation of settings from code.
 
-*DecoupleR* is an attempt to port the excellent python-decouple library into R.
+*DecoupleR* is a port of the excellent [python-decouple](https://github.com/HBNetwork/python-decouple) library for R.
 
-As stated by its original author, python-decouple makes it easy to:
+## Table of Contents
+- [Overview](#overview)
+- [Installation](#installation)
+- [How It Works](#how-it-works)
+  - [Priority Rules](#priority-rules)
+  - [Config File Search](#config-file-search)
+- [Usage](#usage)
+  - [On-the-fly Parameter Evaluation](#on-the-fly-parameter-evaluation)
+  - [Preloading Config Files](#preloading-config-files)
+  - [Handling Undefined Parameters](#undefined-parameters)
+  - [Type Casting](#casting-argument)
+- [Configuration File Formats](#implementated-parsers)
+  - [INI Files](#ini-file)
+  - [ENV Files](#env-file)
 
-- store parameters in *ini* or *.env* files;
-- define comprehensive default values;
-- properly convert values to the correct data type;
-- have **only one** configuration module to rule all your instances.
+## Overview
 
-DecoupleR general behavior have been in order to mimic as much as possible python-decouple, and is tested against python-decouple unit tests.
+As stated by its original author, *DecoupleR* makes it easy to:
 
-## Priority rules and config files serach
+- Store configuration parameters in *ini* or *.env* files
+- Define comprehensive default values
+- Properly convert values to the correct data type
+- Have **only one** configuration module to rule all your application instances
 
-*DecoupleR* always searches for *Options* in this order:
+DecoupleR's behavior mimics python-decouple as closely as possible and is tested against python-decouple's unit tests.
 
-1. Environment variables;
-2. Repository: ini or .env file;
-3. Default argument passed to config.
-
-It has to be noted that environment variables have precedence over config files in order to be unix consistent.
-
-## Config file search
-
-The config files are searched for, by default, in the working directory, or in the any other directory provided via the *path* argument. If no config files, *settings.ini* or *.env* is found in the directory, the search will continue in its parent directories.
-
-## Example
-
-### On-the-fly parameter evaluation
-
-Parameter value can be retrieve anytime by invoking the *DecoupleR::get_var* function. If the *config* parameter is not provided, a config file search will be carried out at each function call. 
+## Installation
 
 ```r
-  get_var('R_HOME')
+# Install from CRAN
+install.packages("DecoupleR")
+
+# Or install the development version from GitHub
+# install.packages("devtools")
+devtools::install_github("dataupsurge/DecoupleR")
 ```
 
-### Preload the config file
+## How It Works
 
-In order to avoid recurrent config file search at each *get_var* call, the config file search can be carried out once via the *get_config* function. A list will be returned, containing the parameters from the config file if any.
+### Priority Rules
 
-## Implementated parser
+*DecoupleR* always searches for configuration values in this order:
 
-*DecoupleR* supports both *.ini* and *.env* files.
+1. Environment variables
+2. Repository config files: `.ini` or `.env` files
+3. Default argument passed to `config`
 
-### Ini file
+Environment variables have precedence over config files to maintain Unix consistency.
+
+### Config File Search
+
+By default, config files are searched for in:
+1. The current working directory
+2. Any other directory provided via the `path` argument
+3. Parent directories (if no config files are found in the current directory)
+
+DecoupleR looks for either `settings.ini` or `.env` files.
+
+## Usage
+
+### On-the-fly Parameter Evaluation
+
+Parameter values can be retrieved anytime by invoking the `DecoupleR::get_var` function:
+
+```r
+library(DecoupleR)
+
+# Retrieve a value from environment or config file
+api_key <- get_var('API_KEY', default='my-default-key')
+
+# With type casting
+debug_mode <- get_var('DEBUG', default=FALSE, cast='logical')
+port_number <- get_var('PORT', default=3000, cast='integer')
+```
+
+If the `config` parameter is not provided, a config file search will be performed at each function call.
+
+### Preloading Config Files
+
+To avoid repeated config file searches, preload the configuration once:
+
+```r
+# Load config once
+config <- get_config()
+
+# Then use it for all subsequent calls
+api_key <- get_var('API_KEY', config=config, default='my-default-key')
+debug_mode <- get_var('DEBUG', config=config, default=FALSE, cast='logical')
+```
+
+### Undefined Parameters
+
+If a parameter has no default value and doesn't exist in the environment or config files, *DecoupleR* will raise an error:
+
+```r
+# This will fail if SECRET_KEY is not defined anywhere
+secret_key <- get_var('SECRET_KEY')
+
+# This will use the default if SECRET_KEY is not defined
+secret_key <- get_var('SECRET_KEY', default='fallback-secret-key')
+```
+
+This *fail-fast* policy helps you avoid subtle bugs when parameters are missing.
+
+### Casting Argument
+
+By default, all values returned by `DecoupleR` are `strings`.
+
+To specify a different return type, use the `cast` argument:
+
+```r
+# Return as integer
+max_connections <- get_var('MAX_CONNECTIONS', default='10', cast='integer')
+
+# Return as logical
+debug_enabled <- get_var('DEBUG', default='True', cast='logical')
+
+# Return as float
+timeout_seconds <- get_var('TIMEOUT', default='5.5', cast='float')
+
+# Custom casting function
+get_var('NUMBERS', default='1,2,3', cast=function(x) as.numeric(strsplit(x, ',')[[1]]))
+```
+
+Predefined casting types include:
+
+- Integer: `'int'`, `'integer'`
+- Boolean: `'bool'`, `'boolean'`, `'logical'`
+- Float: `'float'`
+
+## Implementated Parsers
+
+*DecoupleR* supports both `.ini` and `.env` files.
+
+### Ini File
 
 DecoupleR can read *ini* files and provide simple interpolation.
 
-Simply create a ``settings.ini` in your working directory or in its roots.
+Simply create a `settings.ini` in your working directory or in its parent directories:
 
 ```ini
-
-  [settings]
-  DEBUG=True
-  TEMPLATE_DEBUG=%(DEBUG)s
-  SECRET_KEY=ARANDOMSECRETKEY
-  DATABASE_URL=mysql://myuser:mypassword@myhost/mydatabase
-  PERCENTILE=90%%
-  #COMMENTED=42
+[settings]
+DEBUG=True
+TEMPLATE_DEBUG=%(DEBUG)s
+SECRET_KEY=ARANDOMSECRETKEY
+DATABASE_URL=mysql://myuser:mypassword@myhost/mydatabase
+PERCENTILE=90%%
+#COMMENTED=42
 ```
 
-### Env file
+### Env File
 
-Simply create a ``.env`` text file on your repository's root directory in the form:
+Create a `.env` text file in your repository's root directory:
 
-``` bash
-
-    DEBUG=True
-    TEMPLATE_DEBUG=True
-    SECRET_KEY=ARANDOMSECRETKEY
-    DATABASE_URL=mysql://myuser:mypassword@myhost/mydatabase
-    PERCENTILE=90%
-    #COMMENTED=42
+```bash
+DEBUG=True
+TEMPLATE_DEBUG=True
+SECRET_KEY=ARANDOMSECRETKEY
+DATABASE_URL=mysql://myuser:mypassword@myhost/mydatabase
+PERCENTILE=90%
+#COMMENTED=42
 ```
-
-## *undefined* parameters
-
-On the above example, all configuration parameters except ``SECRET_KEY = config('SECRET_KEY')``
-have a default value to fallback if it does not exist on the ``.env`` file.
-
-If ``SECRET_KEY`` is not present in the ``.env``, *DecoupleR* will raise an error.
-
-This *fail fast* policy helps you avoid chasing misbehaviors when you eventually forget a parameter.
-
-### Casting argument
-
-By default, all values returned by ``DecoupleR`` are ``strings``.
-
-To easily specify a returned type, the ``get_var`` function accepts a ``cast`` argument which receives any *callable*, that will be used to *transform* the string value into something else. Some prefedined transformation have also been implementated:
-
-- Integer: ``int``, ``integer``
-- Bolean: ``bool``, ``boolean``, ``logical``
-- Float: ``float``
