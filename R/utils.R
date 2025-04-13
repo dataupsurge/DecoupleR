@@ -34,7 +34,7 @@ is_undefined <- function(x) {
   if (is.null(class)) {
     return(FALSE)
   }
-  return(class == "UNDEFINED_")
+  class == "UNDEFINED_"
 }
 
 

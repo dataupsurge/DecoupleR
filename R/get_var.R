@@ -97,5 +97,5 @@ cast_as <- function(variable, cast) {
     stop("TypeError: Error during cast step")
   }
 
-  return(variable)
+  variable
 }
