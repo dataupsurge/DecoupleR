@@ -22,5 +22,5 @@ to_logical <- function(x) {
     )
   )
 
-  return(logical_cat$value[match(tolower(x), logical_cat$cat)])
+  logical_cat$value[match(tolower(x), logical_cat$cat)]
 }

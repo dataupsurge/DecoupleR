@@ -54,7 +54,7 @@ load_dot_env <- function(fpath = ".env") {
   env <- remove_comments(env)
   env <- remove_empty_lines(env)
   env <- parse_dot_line(env)
-  return(env)
+  env
 }
 
 parse_dot_line <- function(lines) {
@@ -74,5 +74,5 @@ parse_dot_line <- function(lines) {
   extr <- extr[, c(3, 5), drop = FALSE]
   res <- as.list(extr[, 2])
   names(res) <- extr[, 1]
-  return(res)
+  res
 }
